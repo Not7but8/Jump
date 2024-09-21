@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Swipe Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #70c5ce;
+            font-family: 'Arial', sans-serif;
+        }
+
+        canvas {
+            border: 2px solid #000;
+            background-color: #f0f0f0;
+            display: block;
+        }
+
+        #gameMessage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            padding: 10px 20px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            border-radius: 5px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas"></canvas>
+    <div id="gameMessage">Tap to Start</div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const gameMessage = document.getElementById("gameMessage");
+
+        // Set canvas size for mobile responsiveness
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let player = {
+            x: canvas.width / 2 - 25,
+            y: canvas.height - 100,
+            width: 50,
+            height: 50,
+            color: "#f39c12",
+            velocityY: 0,
+            gravity: 0.6,
+            jumpPower: -15,
+            moveSpeed: 20 // Speed for horizontal movement
+        };
+
+        let platforms = [];
+        let isGameOver = false;
+        let isGameStarted = false;
+        let platformSpeed = 2;
+        let touchStartX = 0; // Store the X position of the start of a swipe
+
+        // Create initial platforms
+        function createPlatforms() {
+            let numberOfPlatforms = 5;
+            let platformWidth = 100;
+            let platformHeight = 20;
+
+            for (let i = 0; i < numberOfPlatforms; i++) {
+                platforms.push({
+                    x: Math.random() * (canvas.width - platformWidth),
+                    y: canvas.height - (i * 150) - 50,
+                    width: platformWidth,
+                    height: platformHeight,
+                    color: "#27ae60"
+                });
+            }
+        }
+
+        // Draw the player
+        function drawPlayer() {
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+        }
+
+        // Draw platforms
+        function drawPlatforms() {
+            platforms.forEach((platform) => {
+                ctx.fillStyle = platform.color;
+                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+            });
+        }
+
+        // Move player
+        function movePlayer() {
+            player.velocityY += player.gravity;
+            player.y += player.velocityY;
+
+            // Prevent player from falling below the canvas
+            if (player.y + player.height > canvas.height) {
+                player.y = canvas.height - player.height;
+                player.velocityY = 0;
+                gameOver();
+            }
+
+            // Check if player is on a platform
+            platforms.forEach((platform) => {
+                if (player.x < platform.x + platform.width &&
+                    player.x + player.width > platform.x &&
+                    player.y + player.height >= platform.y &&
+                    player.y + player.height <= platform.y + platform.height) {
+                    player.velocityY = 0;
+                    player.y = platform.y - player.height;
+                }
+            });
+        }
+
+        // Move platforms
+        function movePlatforms() {
+            platforms.forEach((platform) => {
+                platform.y += platformSpeed;
+
+                if (platform.y > canvas.height) {
+                    platform.y = -platform.height;
+                    platform.x = Math.random() * (canvas.width - platform.width);
+                }
+            });
+        }
+
+        // Clear the canvas
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // Game loop
+        function gameLoop() {
+            if (!isGameOver) {
+                clearCanvas();
+                drawPlayer();
+                drawPlatforms();
+                movePlayer();
+                movePlatforms();
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        // Start the game
+        function startGame() {
+            if (!isGameStarted) {
+                isGameStarted = true;
+                gameMessage.style.display = "none";
+                createPlatforms();
+                gameLoop();
+            }
+        }
+
+        // Handle user tapping the screen for jumping
+        window.addEventListener("touchstart", (e) => {
+            if (!isGameStarted) {
+                startGame();
+            } else {
+                player.velocityY = player.jumpPower; // Make the player jump
+            }
+
+            touchStartX = e.touches[0].clientX; // Store initial touch X position for swiping
+        });
+
+        // Handle swiping to move the player left or right
+        window.addEventListener("touchmove", (e) => {
+            const touchCurrentX = e.touches[0].clientX; // Get the current X position of the touch
+
+            // Detect swipe direction and move the player
+            if (touchCurrentX > touchStartX) {
+                // Swipe to the right
+                player.x += player.moveSpeed;
+            } else if (touchCurrentX < touchStartX) {
+                // Swipe to the left
+                player.x -= player.moveSpeed;
+            }
+
+            // Keep player within the screen bounds
+            if (player.x < 0) {
+                player.x = 0;
+            }
+            if (player.x + player.width > canvas.width) {
+                player.x = canvas.width - player.width;
+            }
+
+            // Update touchStartX to the new current X position
+            touchStartX = touchCurrentX;
+        });
+
+        // Game over function
+        function gameOver() {
+            isGameOver = true;
+            gameMessage.textContent = "Game Over! Tap to Restart";
+            gameMessage.style.display = "block";
+
+            // Restart the game when the screen is tapped
+            window.addEventListener("touchstart", () => {
+                location.reload(); // Reload the page to restart the game
+            });
+        }
+    </script>
+
+</body>
+</html>
